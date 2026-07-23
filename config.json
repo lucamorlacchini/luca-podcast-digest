@@ -1,5 +1,7 @@
 {
   "google_client_id": "932333645667-icdcgl4c738sl08nve3lt53kobmuaahd.apps.googleusercontent.com",
   "google_client_secret": "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",
-  "google_refresh_token": "1//03lgIgNnlIiMICgYIARAAGAMSNwF-L9IrMzFswTnuJr_dhef6kgZXf4BGIRK0C0fw9TAow5qorGTBaomXsPNmoSV7-B-v19NpwGM"
+  "google_refresh_token": "1//034qa4M5qYzi_CgYIARAAGAMSNwF-L9IrLpDGYhF3zT29-A86pno7qH7SFO0d9IBbLmBTBQOK3x7PLW6zZ0-dQfXG7pWzH_Uczwg",
+  "email_to": "luca@alesea.com",
+  "email_from": "luca.morlacchini@gmail.com"
 }
