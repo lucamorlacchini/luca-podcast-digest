@@ -1,0 +1,6 @@
+{
+  "spotify_client_id": "YOUR_SPOTIFY_CLIENT_ID",
+  "spotify_client_secret": "YOUR_SPOTIFY_CLIENT_SECRET",
+  "spotify_refresh_token": "YOUR_SPOTIFY_REFRESH_TOKEN",
+  "groq_api_key": "YOUR_GROQ_API_KEY"
+}
