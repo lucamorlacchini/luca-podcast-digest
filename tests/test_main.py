@@ -38,9 +38,41 @@ def test_run_assembles_entries_across_channels():
          patch("youtube_digest.main.refresh_access_token", return_value="token"), \
          patch("youtube_digest.main.get_subscribed_channels", return_value=channels), \
          patch("youtube_digest.main.get_uploads_playlist_id", return_value="playlist-id"), \
-         patch("youtube_digest.main.get_todays_videos", return_value=[VIDEO]), \
+         patch("youtube_digest.main.get_todays_videos", return_value=[VIDEO]) as mock_get_todays_videos, \
          patch("youtube_digest.main.fetch_transcript", return_value=None):
         result = run("config.json", today_iso="2026-07-23")
 
     assert len(result) == 1
     assert result[0]["channel_title"] == "Channel One"
+    mock_get_todays_videos.assert_called_with("token", "playlist-id", "2026-07-23")
+
+
+def test_run_returns_empty_list_when_no_channels():
+    config = {
+        "google_client_id": "id",
+        "google_client_secret": "secret",
+        "google_refresh_token": "refresh",
+    }
+    with patch("youtube_digest.main.load_config", return_value=config), \
+         patch("youtube_digest.main.refresh_access_token", return_value="token"), \
+         patch("youtube_digest.main.get_subscribed_channels", return_value=[]):
+        result = run("config.json", today_iso="2026-07-23")
+
+    assert result == []
+
+
+def test_run_returns_empty_list_when_channel_has_no_videos():
+    config = {
+        "google_client_id": "id",
+        "google_client_secret": "secret",
+        "google_refresh_token": "refresh",
+    }
+    channels = [{"channel_id": "c1", "title": "Channel One"}]
+    with patch("youtube_digest.main.load_config", return_value=config), \
+         patch("youtube_digest.main.refresh_access_token", return_value="token"), \
+         patch("youtube_digest.main.get_subscribed_channels", return_value=channels), \
+         patch("youtube_digest.main.get_uploads_playlist_id", return_value="playlist-id"), \
+         patch("youtube_digest.main.get_todays_videos", return_value=[]):
+        result = run("config.json", today_iso="2026-07-23")
+
+    assert result == []
