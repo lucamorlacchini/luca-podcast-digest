@@ -1,6 +1,6 @@
 # Podcast Digest
 
-Digest quotidiano via email dei video pubblicati **oggi** dai canali YouTube che segui, con un breve riassunto per ciascuno (dal contenuto reale del video quando disponibile, altrimenti dalla descrizione ufficiale).
+Digest quotidiano via email dei video pubblicati **il giorno precedente** dai canali YouTube che segui, con un breve riassunto per ciascuno (dal contenuto reale del video quando disponibile, altrimenti dalla descrizione ufficiale).
 
 Repo privato personale — non collegato a nessun ambiente aziendale. Contiene di proposito credenziali reali in `config.json` (vedi [Sicurezza e credenziali](#sicurezza-e-credenziali)).
 
@@ -12,7 +12,7 @@ Ogni giorno alle **6:00 (ora italiana)** una routine cloud schedulata (Claude Co
 2. Esegue `python -m youtube_digest.main config.json`, che:
    - si autentica su Google con il refresh token salvato in `config.json`;
    - recupera l'elenco dei canali YouTube seguiti (`subscriptions.list`);
-   - per ciascun canale, recupera i video pubblicati **oggi** (fuso orario Europe/Rome) dalla sua playlist "uploads";
+   - per ciascun canale, recupera i video pubblicati **ieri** (fuso orario Europe/Rome) dalla sua playlist "uploads" — non "oggi": la routine gira alle 6:00, quando la giornata corrente è iniziata da poche ore, quindi il target è sempre il giorno precedente per coprire un'intera giornata di uscite (vedi `youtube_digest/main.py`, funzione `run`);
    - per ogni video, prova a scaricarne la trascrizione (sottotitoli) con `youtube-transcript-api`; se non disponibile, usa la descrizione ufficiale del video come fallback;
    - stampa su stdout un JSON con la lista dei video e il relativo contenuto.
 3. L'agente della routine legge quel JSON e compone il testo dell'email in italiano (raggruppata per canale, con riassunto di 2-3 frasi per video).
@@ -83,3 +83,4 @@ La soluzione adottata è che `youtube_digest/send_email.py` invia l'email **dire
 
 - **Nessun filtro "già visto".** L'API di YouTube non espone la cronologia di visione (rimossa dal 2016, nessuno scope OAuth la ripristina) — il digest include tutti i video nuovi di oggi dai canali seguiti, anche se già visti. L'email lo ricorda sempre con una riga fissa in testa.
 - **Trascrizione reale spesso non disponibile.** Nel collaudo del 23/07/2026, 0 video su 44 hanno ottenuto una trascrizione reale (tutti fallback su descrizione) — le richieste a YouTube per il contenuto dei sottotitoli risultavano bloccate/vuote dall'ambiente di sviluppo usato per il test, non per assenza di sottotitoli sui video stessi (verificato anche su un video notoriamente sottotitolato). Da monitorare se il comportamento è diverso sull'infrastruttura cloud dove gira la routine in produzione.
+- **Nessuna paginazione su `get_todays_videos`.** Per ogni canale si controllano solo i 10 upload più recenti (`youtube_digest/youtube_client.py`). Per un canale molto prolifico, se pubblica molti video nuovi *oggi* prima che la routine giri, i video di *ieri* possono uscire da questa finestra e non venire inclusi nel digest. Non ancora corretto (richiederebbe paginare finché non si esce dalla data target) — da tenere presente se noti assenze sospette da canali ad alta frequenza di pubblicazione.
