@@ -3,5 +3,6 @@
   "google_client_secret": "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",
   "google_refresh_token": "1//034qa4M5qYzi_CgYIARAAGAMSNwF-L9IrLpDGYhF3zT29-A86pno7qH7SFO0d9IBbLmBTBQOK3x7PLW6zZ0-dQfXG7pWzH_Uczwg",
   "email_to": "luca@alesea.com",
-  "email_from": "luca.morlacchini@gmail.com"
+  "email_from": "luca.morlacchini@gmail.com",
+  "transcript_api_key": "sk_r899V5WAw5KaKqn7yvcWTPZQ2iifbFkNme68vsXSl5k"
 }

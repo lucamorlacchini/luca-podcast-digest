@@ -19,8 +19,8 @@ def load_config(path: str) -> dict:
         return json.load(f)
 
 
-def build_video_entry(channel_title: str, video: dict) -> dict:
-    transcript = fetch_transcript(video["video_id"])
+def build_video_entry(channel_title: str, video: dict, transcript_api_key: str) -> dict:
+    transcript = fetch_transcript(video["video_id"], transcript_api_key)
     if transcript:
         content_source = "transcript"
         content_text = transcript
@@ -52,7 +52,7 @@ def run(config_path: str, today_iso: str | None = None) -> list[dict]:
     for channel in get_subscribed_channels(access_token):
         uploads_playlist_id = get_uploads_playlist_id(access_token, channel["channel_id"])
         for video in get_todays_videos(access_token, uploads_playlist_id, target_date):
-            entries.append(build_video_entry(channel["title"], video))
+            entries.append(build_video_entry(channel["title"], video, config["transcript_api_key"]))
     return entries
 
 

@@ -1,5 +1,8 @@
 {
   "google_client_id": "YOUR_GOOGLE_OAUTH_CLIENT_ID",
   "google_client_secret": "YOUR_GOOGLE_OAUTH_CLIENT_SECRET",
-  "google_refresh_token": "YOUR_GOOGLE_OAUTH_REFRESH_TOKEN"
+  "google_refresh_token": "YOUR_GOOGLE_OAUTH_REFRESH_TOKEN",
+  "email_to": "YOUR_EMAIL_ADDRESS",
+  "email_from": "YOUR_GMAIL_ADDRESS",
+  "transcript_api_key": "YOUR_TRANSCRIPTAPI_COM_KEY"
 }
