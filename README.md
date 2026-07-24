@@ -58,7 +58,8 @@ luca-podcast-digest/
 4. **TranscriptAPI.com**: registrarsi su [transcriptapi.com](https://transcriptapi.com) (gratis, 100 crediti inclusi) e generare una API key dalla dashboard.
 5. Compilare `config.json` (vedi `config.example.json` per le chiavi richieste: `google_client_id`, `google_client_secret`, `google_refresh_token`, `email_to`, `email_from`, `transcript_api_key`).
 6. **Collegare GitHub a claude.ai** (https://claude.ai/customize/connectors) — necessario perché la routine cloud possa clonare un repo GitHub.
-7. Creare la routine (`RemoteTrigger`/skill `schedule`): cron giornaliero, `sources` → questo repo, `allowed_tools: ["Bash", "Write"]`, nessun `mcp_connections` necessario.
+7. **Creare un ambiente cloud con accesso di rete personalizzato** (dalla schermata di modifica routine → selettore ambiente → "Aggiungi ambiente"): impostare "Accesso alla rete" su **Personalizzato** (non "Attendibili", il default) e aggiungere alla lista domini sia `transcriptapi.com` sia i domini Google (`googleapis.com`, `accounts.google.com`, ecc. — o l'opzione equivalente "includi lista predefinita"). **Passaggio critico**: senza questo, l'ambiente di default blocca `transcriptapi.com` (proxy egress con allowlist, la richiesta fallisce con "CONNECT tunnel failed, response 403") e la trascrizione reale non funziona mai, silenziosamente in fallback su descrizione — vedi dettagli sotto.
+8. Creare la routine (`RemoteTrigger`/skill `schedule`): cron giornaliero, `sources` → questo repo, `allowed_tools: ["Bash", "Write"]`, nessun `mcp_connections` necessario, `environment_id` → l'ambiente custom creato al punto 7.
 
 ## Manutenzione
 
@@ -86,6 +87,8 @@ La soluzione adottata è che `youtube_digest/send_email.py` invia l'email **dire
 La prima versione usava la libreria gratuita `youtube-transcript-api`, che scarica i sottotitoli direttamente da YouTube. Nel collaudo del 23/07/2026, 0 video su 44 hanno ottenuto una trascrizione reale (tutti fallback su descrizione) — le richieste per il contenuto dei sottotitoli risultavano bloccate/vuote, sia dall'ambiente di sviluppo sia dall'infrastruttura cloud reale della routine, anche su un video notoriamente sottotitolato. È il comportamento documentato di YouTube verso le richieste da IP di infrastrutture cloud (AWS/GCP/Azure e simili), non un problema di sottotitoli assenti.
 
 La soluzione adottata è **TranscriptAPI.com** (~5$/mese + 1,50$ ogni 1.000 trascrizioni, 100 crediti gratis inclusi): un servizio a pagamento la cui infrastruttura è pensata apposta per bypassare questo blocco. Integrazione minima (`youtube_digest/transcript.py`): una chiamata REST con l'id del video, torna il testo della trascrizione o `None` se non disponibile.
+
+**Attenzione — un secondo blocco di rete separato:** anche con l'integrazione corretta, il primo collaudo su questo servizio ha continuato a fallire (0 trascrizioni reali) mentre in locale funzionava. Causa: l'ambiente cloud "Default" delle routine ha un proxy in uscita con un allowlist di domini fidati (registri pacchetti, GitHub, Google Cloud, Anthropic, ecc.) che **non include `transcriptapi.com`** — la richiesta falliva con `CONNECT tunnel failed, response 403` prima ancora di raggiungere il servizio. Risolto creando un ambiente cloud dedicato con "Accesso alla rete" impostato su **Personalizzato**, includendo sia `transcriptapi.com` sia i domini Google (necessari per YouTube/Gmail, altrimenti si rompe anche quello). Confermato nel collaudo del 24/07/2026: 9 trascrizioni reali su 11 video (i 2 rimanenti genuinamente senza sottotitoli).
 
 ## Limitazioni note
 
