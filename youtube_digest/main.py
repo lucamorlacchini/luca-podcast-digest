@@ -1,6 +1,6 @@
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from youtube_digest.youtube_client import (
@@ -44,11 +44,14 @@ def run(config_path: str, today_iso: str | None = None) -> list[dict]:
         config["google_client_secret"],
         config["google_refresh_token"],
     )
-    today = today_iso or datetime.now(ROME_TZ).date().isoformat()
+    # The routine runs early each morning, so "today" would only cover the few
+    # hours since midnight. Default to yesterday's date to capture the full
+    # previous day's uploads instead — the reason a daily digest exists at all.
+    target_date = today_iso or (datetime.now(ROME_TZ).date() - timedelta(days=1)).isoformat()
     entries = []
     for channel in get_subscribed_channels(access_token):
         uploads_playlist_id = get_uploads_playlist_id(access_token, channel["channel_id"])
-        for video in get_todays_videos(access_token, uploads_playlist_id, today):
+        for video in get_todays_videos(access_token, uploads_playlist_id, target_date):
             entries.append(build_video_entry(channel["title"], video))
     return entries
 
