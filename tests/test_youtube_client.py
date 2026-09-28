@@ -89,3 +89,16 @@ def test_get_todays_videos_filters_by_date():
             "description": "desc 1",
         }
     ]
+
+
+def test_get_todays_videos_returns_empty_when_uploads_playlist_missing():
+    # A subscribed channel with zero public videos has an uploads playlist id
+    # that YouTube answers with 404 — must not abort the whole digest.
+    response = MagicMock()
+    response.status_code = 404
+
+    with patch("youtube_digest.youtube_client.requests.get", return_value=response):
+        result = get_todays_videos("fake-token", "UUempty", "2026-07-23")
+
+    assert result == []
+    response.raise_for_status.assert_not_called()

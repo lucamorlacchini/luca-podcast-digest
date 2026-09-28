@@ -52,6 +52,11 @@ def get_todays_videos(access_token: str, uploads_playlist_id: str, today_iso_dat
     headers = {"Authorization": f"Bearer {access_token}"}
     params = {"part": "snippet", "playlistId": uploads_playlist_id, "maxResults": 10}
     response = requests.get(f"{YOUTUBE_API_BASE}/playlistItems", headers=headers, params=params, timeout=10)
+    # A channel with zero public videos still reports an uploads playlist id,
+    # but YouTube answers 404 on it. Treat it as "no new videos" so one empty
+    # subscribed channel doesn't abort the whole digest.
+    if response.status_code == 404:
+        return []
     response.raise_for_status()
     videos = []
     for item in response.json()["items"]:
