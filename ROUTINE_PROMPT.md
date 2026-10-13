@@ -1,4 +1,4 @@
-Installa le dipendenze con `python -m pip install -q -r requirements.txt` (usa `python -m pip`, non `pip`: nell'ambiente cloud `pip` installa per un altro Python). Poi esegui `python -m podcast_digest.main config.json > digest.json` nella root del repo e leggi `digest.json`. Il comando può richiedere 10-15 minuti: scarica e trascrive l'audio di ogni episodio.
+Installa le dipendenze con `python -m pip install -q -r requirements.txt` (usa `python -m pip`, non `pip`: nell'ambiente cloud `pip` installa per un altro Python). Poi esegui `python -m podcast_digest.main config.json > digest.json` nella root del repo e leggi `digest.json`. Esegui questo comando in primo piano (non in background) con timeout 600000 e attendi che finisca: scarica e trascrive l'audio di ogni episodio e di solito richiede 3-6 minuti.
 
 Se "status" è "error": scrivi in `email_body.txt` un breve testo in italiano che spiega che il controllo giornaliero è fallito, con il messaggio di errore ricevuto. Invialo con `python -m podcast_digest.send_email config.json "Podcast Digest - controllo fallito" email_body.txt`.
 
@@ -18,3 +18,5 @@ Per scrivere ogni riassunto leggi per intero il file indicato in "content_file" 
 - Se content_source è "none": nessun riassunto, scrivi solo "(nessun contenuto disponibile: <fallback_reason>)". Non dedurre mai il contenuto dal solo titolo.
 
 Infine invia l'email con `python -m podcast_digest.send_email config.json "🎧 Podcast del giorno" email_body.txt`.
+
+Non fare commit né push: i file generati (`digest.json`, `email_body.txt`, `out/`) sono temporanei e ignorati da git.

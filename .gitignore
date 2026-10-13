@@ -4,3 +4,6 @@ __pycache__/
 *.mp3
 *.ogg
 out/
+digest.json
+email_body.txt
+*.log

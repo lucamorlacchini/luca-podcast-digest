@@ -1,12 +1,14 @@
 import json
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 
 from podcast_digest.feeds import ROME_TZ, episodes_on, fetch_feed, parse_episodes, spotify_search_url
 from podcast_digest.transcribe import TranscriptionError, transcribe_episode
 
 OUTPUT_DIR = "out"
+TRANSCRIBE_WORKERS = 4
 
 
 def load_json(path: str):
@@ -65,7 +67,7 @@ def run(config_path: str, podcasts_path: str, target_iso: str | None = None) -> 
                 "feed_errors": [], "warnings": warnings}
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    episodes, feed_errors = [], []
+    to_transcribe, feed_errors = [], []
     for podcast in load_json(podcasts_path):
         try:
             found = episodes_on(parse_episodes(fetch_feed(podcast["feed_url"])), target_date)
@@ -73,8 +75,15 @@ def run(config_path: str, podcasts_path: str, target_iso: str | None = None) -> 
             # One broken feed must not cost Luca the whole digest.
             feed_errors.append({"podcast": podcast["name"], "error": type(exc).__name__})
             continue
-        for episode in found:
-            episodes.append(build_entry(podcast["name"], episode, config["groq_api_key"], len(episodes) + 1))
+        to_transcribe.extend((podcast["name"], episode) for episode in found)
+
+    # Download + compress + transcribe is mostly waiting on the network, so a few
+    # episodes in parallel keep a ~14-episode day well under the 10-minute mark.
+    with ThreadPoolExecutor(max_workers=TRANSCRIBE_WORKERS) as pool:
+        episodes = list(pool.map(
+            lambda job: build_entry(job[1][0], job[1][1], config["groq_api_key"], job[0]),
+            enumerate(to_transcribe, start=1),
+        ))
 
     return {"status": "ok", "target_date": target_date.isoformat(), "episodes": episodes,
             "feed_errors": feed_errors, "warnings": warnings}
