@@ -1,6 +1,6 @@
 # Podcast Digest
 
-Digest quotidiano via email dei video pubblicati **il giorno precedente** dai canali YouTube che segui, con un breve riassunto per ciascuno (dal contenuto reale del video quando disponibile, altrimenti dalla descrizione ufficiale).
+Digest quotidiano via email degli episodi usciti **il giorno precedente** dei podcast che segui su Spotify, con un breve riassunto per ciascuno ricavato dalla **trascrizione reale dell'audio**.
 
 Repo privato personale — non collegato a nessun ambiente aziendale. Contiene di proposito credenziali reali in `config.json` (vedi [Sicurezza e credenziali](#sicurezza-e-credenziali)).
 
@@ -8,90 +8,56 @@ Repo privato personale — non collegato a nessun ambiente aziendale. Contiene d
 
 Ogni giorno alle **6:00 (ora italiana)** una routine cloud schedulata (Claude Code Routines):
 
-1. Clona questo repo e installa le dipendenze (`pip install -r requirements.txt`).
-2. Esegue `python -m youtube_digest.main config.json`, che:
-   - si autentica su Google con il refresh token salvato in `config.json`;
-   - recupera l'elenco dei canali YouTube seguiti (`subscriptions.list`);
-   - per ciascun canale, recupera i video pubblicati **ieri** (fuso orario Europe/Rome) dalla sua playlist "uploads" — non "oggi": la routine gira alle 6:00, quando la giornata corrente è iniziata da poche ore, quindi il target è sempre il giorno precedente per coprire un'intera giornata di uscite (vedi `youtube_digest/main.py`, funzione `run`);
-   - per ogni video, prova a scaricarne la trascrizione tramite il servizio **TranscriptAPI.com** (vedi [perché non la libreria gratuita](#perché-la-trascrizione-passa-da-un-servizio-a-pagamento)); se non disponibile, usa la descrizione ufficiale del video come fallback;
-   - stampa su stdout un JSON con la lista dei video e il relativo contenuto.
-3. L'agente della routine legge quel JSON e compone il testo dell'email in italiano (raggruppata per canale, con riassunto di 2-3 frasi per video).
-4. L'agente invia l'email eseguendo `python -m youtube_digest.send_email config.json "<oggetto>" <file-corpo>`, che manda il messaggio **direttamente via Gmail API** (non tramite un connettore MCP — vedi [perché](#perché-linvio-passa-da-uno-script-e-non-da-un-connettore-mcp)).
+1. Clona questo repo e installa le dipendenze.
+2. Esegue `python -m podcast_digest.main config.json`, che per ogni podcast in `podcasts.json`:
+   - legge il **feed RSS pubblico** del podcast e prende gli episodi usciti **ieri** (fuso Europe/Rome);
+   - scarica l'audio, lo comprime (mono 16 kHz Opus, ~7 MB/ora) e lo trascrive con **Whisper su Groq** (`whisper-large-v3-turbo`);
+   - salva ogni trascrizione in `out/NN.txt` e stampa su stdout un JSON indice (episodi, fonte del contenuto, errori, avvisi).
+3. L'agente della routine legge le trascrizioni, scrive l'email in italiano (raggruppata per podcast, 2-4 frasi per episodio, link "Ascolta su Spotify") e la invia con `python -m podcast_digest.send_email` via **Gmail API**.
 
-Se non ci sono video nuovi quel giorno, **non viene inviata nessuna email**. Se il controllo fallisce (es. token scaduto), viene inviata una breve email di alert invece del digest.
+Le istruzioni esatte dell'agente sono in [`ROUTINE_PROMPT.md`](ROUTINE_PROMPT.md) — se le modifichi, aggiorna anche la routine.
 
-Non c'è nessuno stato persistente tra un'esecuzione e l'altra: tutto si ricalcola da zero ogni giorno.
+Se non ci sono episodi nuovi, **non viene inviata nessuna email**. Se il controllo fallisce, arriva una breve email di alert. Nessuno stato persistente tra un'esecuzione e l'altra.
 
-## Struttura del progetto
+## Perché non l'API di Spotify
 
-```
-luca-podcast-digest/
-├── config.json                  # credenziali reali (committate di proposito, vedi sotto)
-├── config.example.json          # template delle chiavi richieste, senza valori reali
-├── requirements.txt
-├── youtube_digest/
-│   ├── youtube_client.py        # auth Google + canali seguiti + video di oggi
-│   ├── transcript.py            # trascrizione via TranscriptAPI.com (fallback a None se non disponibile)
-│   ├── main.py                  # orchestrazione: produce il JSON dei video di oggi
-│   └── send_email.py            # invio email diretto via Gmail API
-└── tests/                       # un file di test per ciascun modulo sopra
-```
+L'API di Spotify serve solo a leggere la lista dei podcast seguiti e quali episodi hai già ascoltato — non dà accesso né all'audio né alle trascrizioni. Da febbraio 2026 richiede inoltre che il proprietario dell'app abbia **Spotify Premium** (account attuale: non Premium). Quindi la lista dei podcast è mantenuta a mano in `podcasts.json` e il contenuto arriva dai feed RSS pubblici, dove gli stessi episodi sono pubblicati con l'audio scaricabile. Conseguenze:
 
-## Setup da zero (se va rifatto su un altro account)
+- **Nessun filtro "già ascoltato"**: il digest include tutti gli episodi nuovi.
+- **Nuovi podcast seguiti su Spotify** vanno aggiunti a `podcasts.json` (nome + `feed_url`; il feed si trova cercando il podcast su `https://itunes.apple.com/search?media=podcast&term=<nome>`, campo `feedUrl`).
+- **Podcast esclusivi Spotify** (senza feed pubblico) non sono supportati. Alla configurazione iniziale (13/10/2026) tutti i 45 podcast seguiti avevano un feed pubblico.
 
-1. **Repo GitHub privato** — già fatto per questo repo.
-2. **Google Cloud Console** (progetto "Podcast Digest" — [console.cloud.google.com](https://console.cloud.google.com)):
-   - Abilitare **YouTube Data API v3** e **Gmail API** (APIs & Services → Library).
-   - **Google Auth Platform** → Pubblico: tipo utente **External**, stato **"In production"** (evita la scadenza del refresh token a 7 giorni prevista in stato "Testing" — per uno scope sensibile come questo, un'app personale non verificata funziona comunque cliccando oltre l'avviso "Google non ha verificato questa app").
-   - **Client** → Crea client OAuth, tipo **Desktop app**. Serve `client_id` e `client_secret`.
-3. **Autorizzazione OAuth una tantum** (scope combinati: lettura YouTube + invio Gmail):
-   ```
-   https://accounts.google.com/o/oauth2/v2/auth?client_id=CLIENT_ID&redirect_uri=http%3A%2F%2F127.0.0.1%3A8888%2Fcallback&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fyoutube.readonly%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.send&access_type=offline&prompt=consent
-   ```
-   Apri il link, accetta, e dall'URL di redirect (`http://127.0.0.1:8888/callback?code=...`) copia il valore di `code`. Poi scambialo per un refresh token:
-   ```bash
-   curl -X POST https://oauth2.googleapis.com/token \
-     -d grant_type=authorization_code -d code=IL_CODE \
-     -d redirect_uri=http://127.0.0.1:8888/callback \
-     -u CLIENT_ID:CLIENT_SECRET
-   ```
-4. **TranscriptAPI.com**: registrarsi su [transcriptapi.com](https://transcriptapi.com) (gratis, 100 crediti inclusi) e generare una API key dalla dashboard.
-5. Compilare `config.json` (vedi `config.example.json` per le chiavi richieste: `google_client_id`, `google_client_secret`, `google_refresh_token`, `email_to`, `email_from`, `transcript_api_key`).
-6. **Collegare GitHub a claude.ai** (https://claude.ai/customize/connectors) — necessario perché la routine cloud possa clonare un repo GitHub.
-7. **Creare un ambiente cloud con accesso di rete personalizzato** (dalla schermata di modifica routine → selettore ambiente → "Aggiungi ambiente"): impostare "Accesso alla rete" su **Personalizzato** (non "Attendibili", il default) e aggiungere alla lista domini sia `transcriptapi.com` sia i domini Google (`googleapis.com`, `accounts.google.com`, ecc. — o l'opzione equivalente "includi lista predefinita"). **Passaggio critico**: senza questo, l'ambiente di default blocca `transcriptapi.com` (proxy egress con allowlist, la richiesta fallisce con "CONNECT tunnel failed, response 403") e la trascrizione reale non funziona mai, silenziosamente in fallback su descrizione — vedi dettagli sotto.
-8. Creare la routine (`RemoteTrigger`/skill `schedule`): cron giornaliero, `sources` → questo repo, `allowed_tools: ["Bash", "Write"]`, nessun `mcp_connections` necessario, `environment_id` → l'ambiente custom creato al punto 7.
+## Configurazione (`config.json`)
+
+| Chiave | Uso |
+|---|---|
+| `google_client_id`, `google_client_secret`, `google_refresh_token` | OAuth Google, scope `gmail.send` (invio email) |
+| `email_to`, `email_from` | destinatario / mittente |
+| `groq_api_key` | chiave Groq per Whisper |
+| `groq_key_expires` | data di scadenza della chiave: l'email avvisa 2 giorni e 1 giorno prima, e dopo la scadenza |
+| `start_date` | gli episodi usciti prima di questa data non vengono mai trascritti (evita costi su episodi vecchi) |
+
+## Costi
+
+Groq fattura ~0,04 $ per ora di audio. Sui 45 podcast seguiti, negli ultimi 30 giorni prima dell'avvio: ~14 episodi e ~7 ore di audio al giorno → ~0,27 $/giorno, ~8 $/mese. Il piano gratuito di Groq ha limiti orari/giornalieri sull'audio: se vengono superati, gli episodi in eccesso ricadono sulle note dell'episodio (motivo indicato nell'email) — in quel caso conviene attivare il piano a consumo su console.groq.com.
+
+## Setup da zero
+
+1. **Google Cloud** (progetto "Podcast Digest"): Gmail API abilitata, app OAuth "In production", client Desktop; refresh token ottenuto con lo scope `https://www.googleapis.com/auth/gmail.send` (vedi cronologia git per la procedura dettagliata).
+2. **Groq**: chiave da console.groq.com → API Keys.
+3. **Ambiente cloud della routine con accesso di rete completo**: i file audio sono ospitati su decine di domini diversi (megaphone, spreaker, cloudfront, redirect di tracking come podtrac...), quindi un allowlist di domini non è praticabile. Senza accesso completo i download falliscono.
+4. **Routine** (`RemoteTrigger`/skill `schedule`): cron `0 5 * * *` (6:00 ora solare) / `0 4 * * *` (6:00 ora legale), `sources` → questo repo, `allowed_tools: ["Bash", "Write", "Read"]`, prompt = `ROUTINE_PROMPT.md`.
 
 ## Manutenzione
 
-- **Cambio ora legale/solare:** il cron della routine è fissato in UTC. È impostato per le 6:00 CEST (ora legale, `0 4 * * *`). Quando torna l'ora solare (fine ottobre), l'orario locale effettivo slitterà di un'ora (diventerà le 5:00) finché il cron non viene aggiornato manualmente a `0 5 * * *`.
-- **Refresh token revocato/scaduto:** in teoria non scade mai con l'app in stato "In production" (vedi sopra), ma se Google dovesse richiedere la verifica dell'app in futuro, l'autorizzazione andrebbe rifatta seguendo lo step 3 sopra.
-- **Aggiungere/rimuovere canali seguiti:** non serve toccare nulla qui — basta seguire/smettere di seguire un canale direttamente su YouTube, il digest si adatta automaticamente al giorno dopo.
-- **Crediti TranscriptAPI.com esauriti:** ogni trascrizione riuscita costa 1 credito (100 gratuiti all'iscrizione, poi a pagamento — vedi sezione sotto). Se i crediti finiscono, le richieste di trascrizione falliscono e il sistema fa automaticamente fallback alla descrizione per tutti i video (nessun errore, solo riassunti meno ricchi) — controllare il saldo sulla dashboard del servizio se noti che il digest è tornato "tutto fallback".
+- **Cambio ora legale/solare:** il cron è in UTC. Ora solare (da fine ottobre): `0 5 * * *`. Ora legale (da fine marzo): `0 4 * * *`. Va aggiornato a mano.
+- **Scadenza chiave Groq:** aggiorna `groq_api_key` e `groq_key_expires`.
+- **Un feed smette di funzionare:** compare in "Podcast non controllati oggi" nell'email; cerca il nuovo `feedUrl` come sopra.
 
 ## Sicurezza e credenziali
 
-`config.json` contiene credenziali reali (Google client id/secret, refresh token) ed è **committato di proposito**, non in `.gitignore`: è l'unico modo per la routine cloud di leggerle a ogni esecuzione, dato che ogni run parte da un checkout fresco del repo senza altro stato persistente. Questo è accettabile solo perché:
-- il repo è **privato** e a **uso personale** (nessun collaboratore);
-- non è in nessun modo collegato ad ambienti aziendali.
+`config.json` contiene credenziali reali ed è **committato di proposito**: è l'unico modo per la routine cloud di leggerle, dato che ogni run parte da un checkout fresco. Accettabile solo perché il repo è **privato**, a **uso personale** e non collegato ad ambienti aziendali. GitHub può bloccare i push che contengono segreti riconosciuti (push protection): va autorizzato esplicitamente.
 
-GitHub blocca automaticamente (push protection) i push che contengono segreti riconosciuti, anche su repo privati: è normale, e per questo repo va autorizzato esplicitamente ("I'll fix it later") ogni volta che un push introduce o modifica una credenziale.
+## Storia
 
-## Perché l'invio passa da uno script e non da un connettore MCP
-
-La prima versione della routine usava il connettore MCP Microsoft 365 (Outlook) per comporre e inviare l'email direttamente dall'agente. In pratica, le chiamate agli strumenti del connettore fallivano in silenzio dentro le routine schedulate (bug noto della piattaforma, [issue #61027](https://github.com/anthropics/claude-code/issues/61027): le routine dovrebbero poter usare i connettori MCP senza chiedere conferma, ma di fatto la conferma viene richiesta e non arriva mai). Risultato: nessuna email arrivava mai.
-
-La soluzione adottata è che `youtube_digest/send_email.py` invia l'email **direttamente via Gmail API**, usando le stesse credenziali OAuth Google già usate per leggere YouTube (con lo scope aggiuntivo `gmail.send`). L'agente della routine continua a comporre il testo dell'email (è bravo a scrivere un riassunto naturale), ma la consegna è affidata al nostro script, non a un tool MCP — bypassando così il bug alla radice.
-
-## Perché la trascrizione passa da un servizio a pagamento
-
-La prima versione usava la libreria gratuita `youtube-transcript-api`, che scarica i sottotitoli direttamente da YouTube. Nel collaudo del 23/07/2026, 0 video su 44 hanno ottenuto una trascrizione reale (tutti fallback su descrizione) — le richieste per il contenuto dei sottotitoli risultavano bloccate/vuote, sia dall'ambiente di sviluppo sia dall'infrastruttura cloud reale della routine, anche su un video notoriamente sottotitolato. È il comportamento documentato di YouTube verso le richieste da IP di infrastrutture cloud (AWS/GCP/Azure e simili), non un problema di sottotitoli assenti.
-
-La soluzione adottata è **TranscriptAPI.com** (~5$/mese + 1,50$ ogni 1.000 trascrizioni, 100 crediti gratis inclusi): un servizio a pagamento la cui infrastruttura è pensata apposta per bypassare questo blocco. Integrazione minima (`youtube_digest/transcript.py`): una chiamata REST con l'id del video, torna il testo della trascrizione o `None` se non disponibile.
-
-**Attenzione — un secondo blocco di rete separato:** anche con l'integrazione corretta, il primo collaudo su questo servizio ha continuato a fallire (0 trascrizioni reali) mentre in locale funzionava. Causa: l'ambiente cloud "Default" delle routine ha un proxy in uscita con un allowlist di domini fidati (registri pacchetti, GitHub, Google Cloud, Anthropic, ecc.) che **non include `transcriptapi.com`** — la richiesta falliva con `CONNECT tunnel failed, response 403` prima ancora di raggiungere il servizio. Risolto creando un ambiente cloud dedicato con "Accesso alla rete" impostato su **Personalizzato**, includendo sia `transcriptapi.com` sia i domini Google (necessari per YouTube/Gmail, altrimenti si rompe anche quello). Confermato nel collaudo del 24/07/2026: 9 trascrizioni reali su 11 video (i 2 rimanenti genuinamente senza sottotitoli).
-
-## Limitazioni note
-
-- **Nessun filtro "già visto".** L'API di YouTube non espone la cronologia di visione (rimossa dal 2016, nessuno scope OAuth la ripristina) — il digest include tutti i video nuovi di ieri dai canali seguiti, anche se già visti. L'email lo ricorda sempre con una riga fissa in testa.
-- **Nessuna paginazione su `get_todays_videos`.** Per ogni canale si controllano solo i 10 upload più recenti (`youtube_digest/youtube_client.py`). Per un canale molto prolifico, se pubblica molti video nuovi *oggi* prima che la routine giri, i video di *ieri* possono uscire da questa finestra e non venire inclusi nel digest. Non ancora corretto (richiederebbe paginare finché non si esce dalla data target) — da tenere presente se noti assenze sospette da canali ad alta frequenza di pubblicazione.
-- **Canali seguiti senza video pubblici.** Un canale con 0 video pubblici (rimossi o resi privati) espone comunque un id di playlist "uploads", ma YouTube risponde 404 su `playlistItems`. `get_todays_videos` tratta il 404 come "nessun video nuovo" e passa al canale successivo, invece di far fallire l'intero digest (caso reale del 28/09/2026: "La Storia con Barbero - Vassalli").
+Fino al 13/10/2026 il digest riguardava i video YouTube dei canali seguiti (trascrizioni via TranscriptAPI.com, poi rimasto senza crediti). Il codice è nella cronologia git (`youtube_digest/`).

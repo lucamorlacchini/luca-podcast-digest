@@ -2,14 +2,14 @@ import base64
 import email
 from unittest.mock import patch, MagicMock
 
-from youtube_digest.send_email import send_email
+from podcast_digest.send_email import send_email
 
 
 def test_send_email_posts_correct_gmail_payload():
     response = MagicMock()
     response.raise_for_status.return_value = None
 
-    with patch("youtube_digest.send_email.requests.post", return_value=response) as mock_post:
+    with patch("podcast_digest.send_email.requests.post", return_value=response) as mock_post:
         send_email(
             access_token="fake-token",
             to_address="luca@alesea.com",
@@ -36,7 +36,7 @@ def test_send_email_raises_on_http_error():
     response = MagicMock()
     response.raise_for_status.side_effect = Exception("500 server error")
 
-    with patch("youtube_digest.send_email.requests.post", return_value=response):
+    with patch("podcast_digest.send_email.requests.post", return_value=response):
         try:
             send_email(
                 access_token="fake-token",

@@ -4,8 +4,8 @@ from email.mime.text import MIMEText
 
 import requests
 
-from youtube_digest.main import load_config
-from youtube_digest.youtube_client import refresh_access_token
+from podcast_digest.main import load_json as load_config
+from podcast_digest.google_auth import refresh_access_token
 
 GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
 

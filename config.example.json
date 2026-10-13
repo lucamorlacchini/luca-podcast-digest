@@ -1,8 +1,10 @@
 {
-  "google_client_id": "YOUR_GOOGLE_OAUTH_CLIENT_ID",
-  "google_client_secret": "YOUR_GOOGLE_OAUTH_CLIENT_SECRET",
-  "google_refresh_token": "YOUR_GOOGLE_OAUTH_REFRESH_TOKEN",
-  "email_to": "YOUR_EMAIL_ADDRESS",
-  "email_from": "YOUR_GMAIL_ADDRESS",
-  "transcript_api_key": "YOUR_TRANSCRIPTAPI_COM_KEY"
+  "google_client_id": "YOUR_GOOGLE_CLIENT_ID",
+  "google_client_secret": "YOUR_GOOGLE_CLIENT_SECRET",
+  "google_refresh_token": "YOUR_GOOGLE_REFRESH_TOKEN",
+  "email_to": "YOUR_EMAIL_TO",
+  "email_from": "YOUR_EMAIL_FROM",
+  "groq_api_key": "YOUR_GROQ_API_KEY",
+  "groq_key_expires": "YYYY-MM-DD",
+  "start_date": "YYYY-MM-DD"
 }

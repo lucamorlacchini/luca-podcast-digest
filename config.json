@@ -4,5 +4,7 @@
   "google_refresh_token": "1//034qa4M5qYzi_CgYIARAAGAMSNwF-L9IrLpDGYhF3zT29-A86pno7qH7SFO0d9IBbLmBTBQOK3x7PLW6zZ0-dQfXG7pWzH_Uczwg",
   "email_to": "luca@alesea.com",
   "email_from": "luca.morlacchini@gmail.com",
-  "transcript_api_key": "sk_r899V5WAw5KaKqn7yvcWTPZQ2iifbFkNme68vsXSl5k"
+  "groq_api_key": "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",
+  "groq_key_expires": "2026-11-12",
+  "start_date": "2026-10-13"
 }
