@@ -34,7 +34,7 @@ L'API di Spotify serve solo a leggere la lista dei podcast seguiti e quali episo
 | `google_client_id`, `google_client_secret`, `google_refresh_token` | OAuth Google, scope `gmail.send` (invio email) |
 | `email_to`, `email_from` | destinatario / mittente |
 | `groq_api_key` | lasciare vuoto: la chiave Groq va nella variabile d'ambiente `GROQ_API_KEY` dell'ambiente della routine (vedi Sicurezza) |
-| `groq_key_expires` | data di scadenza della chiave: l'email avvisa 2 giorni e 1 giorno prima, e dopo la scadenza |
+| `groq_key_expires` | facoltativo: data di scadenza della chiave, se ne ha una (l'email avvisa 2 giorni e 1 giorno prima). La chiave attuale (18/10/2026) non scade. |
 | `start_date` | gli episodi usciti prima di questa data non vengono mai trascritti (evita costi su episodi vecchi) |
 
 ## Costi
