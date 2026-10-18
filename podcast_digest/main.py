@@ -9,6 +9,16 @@ from podcast_digest.transcribe import TranscriptionError, transcribe_episode
 
 OUTPUT_DIR = "out"
 TRANSCRIBE_WORKERS = 4
+INVALID_KEY_REASON = "chiave Groq non valida o scaduta"
+INVALID_KEY_WARNING = ("La chiave Groq non è valida (revocata o scaduta): nessun episodio è stato trascritto. "
+                       "Creane una nuova su console.groq.com e aggiorna la variabile GROQ_API_KEY "
+                       "nell'ambiente della routine.")
+
+
+def groq_api_key(config: dict) -> str:
+    # The key lives in the routine environment, not in the repo: a key committed to
+    # GitHub gets flagged as exposed and revoked (that is what broke 17 Oct 2026).
+    return os.environ.get("GROQ_API_KEY") or config.get("groq_api_key", "")
 
 
 def load_json(path: str):
@@ -79,11 +89,15 @@ def run(config_path: str, podcasts_path: str, target_iso: str | None = None) -> 
 
     # Download + compress + transcribe is mostly waiting on the network, so a few
     # episodes in parallel keep a ~14-episode day well under the 10-minute mark.
+    api_key = groq_api_key(config)
     with ThreadPoolExecutor(max_workers=TRANSCRIBE_WORKERS) as pool:
         episodes = list(pool.map(
-            lambda job: build_entry(job[1][0], job[1][1], config["groq_api_key"], job[0]),
+            lambda job: build_entry(job[1][0], job[1][1], api_key, job[0]),
             enumerate(to_transcribe, start=1),
         ))
+    # A dead key silently turns every summary into show notes; say so at the top of the email.
+    if any(e.get("fallback_reason") == INVALID_KEY_REASON for e in episodes):
+        warnings.append(INVALID_KEY_WARNING)
 
     return {"status": "ok", "target_date": target_date.isoformat(), "episodes": episodes,
             "feed_errors": feed_errors, "warnings": warnings}

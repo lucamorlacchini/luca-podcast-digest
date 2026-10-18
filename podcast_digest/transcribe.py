@@ -39,6 +39,8 @@ def compress_audio(src_path: str, dest_path: str) -> None:
 
 
 def transcribe_file(path: str, api_key: str) -> str:
+    if not api_key:
+        raise TranscriptionError("chiave Groq non valida o scaduta")
     for attempt in range(3):
         with open(path, "rb") as f:
             response = requests.post(

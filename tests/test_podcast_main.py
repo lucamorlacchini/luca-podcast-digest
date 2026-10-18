@@ -95,3 +95,19 @@ def test_expiry_warning_two_days_and_one_day_before(today, expected):
         assert warning is None
     else:
         assert expected in warning
+
+
+def test_run_warns_when_groq_key_is_rejected(setup):
+    with patch.object(main, "fetch_feed", return_value=b""), \
+         patch.object(main, "parse_episodes", side_effect=[[EPISODE], []]), \
+         patch.object(main, "transcribe_episode", side_effect=TranscriptionError(main.INVALID_KEY_REASON)):
+        result = run("config.json", "podcasts.json", "2026-10-13")
+
+    assert main.INVALID_KEY_WARNING in result["warnings"]
+
+
+def test_groq_key_comes_from_environment_first(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_env")
+    assert main.groq_api_key({"groq_api_key": "gsk_file"}) == "gsk_env"
+    monkeypatch.delenv("GROQ_API_KEY")
+    assert main.groq_api_key({"groq_api_key": "gsk_file"}) == "gsk_file"

@@ -4,7 +4,7 @@
   "google_refresh_token": "YOUR_GOOGLE_REFRESH_TOKEN",
   "email_to": "YOUR_EMAIL_TO",
   "email_from": "YOUR_EMAIL_FROM",
-  "groq_api_key": "YOUR_GROQ_API_KEY",
+  "groq_api_key": "",
   "groq_key_expires": "YYYY-MM-DD",
   "start_date": "YYYY-MM-DD"
 }

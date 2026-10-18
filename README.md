@@ -33,7 +33,7 @@ L'API di Spotify serve solo a leggere la lista dei podcast seguiti e quali episo
 |---|---|
 | `google_client_id`, `google_client_secret`, `google_refresh_token` | OAuth Google, scope `gmail.send` (invio email) |
 | `email_to`, `email_from` | destinatario / mittente |
-| `groq_api_key` | chiave Groq per Whisper |
+| `groq_api_key` | lasciare vuoto: la chiave Groq va nella variabile d'ambiente `GROQ_API_KEY` dell'ambiente della routine (vedi Sicurezza) |
 | `groq_key_expires` | data di scadenza della chiave: l'email avvisa 2 giorni e 1 giorno prima, e dopo la scadenza |
 | `start_date` | gli episodi usciti prima di questa data non vengono mai trascritti (evita costi su episodi vecchi) |
 
@@ -44,19 +44,21 @@ Groq fattura ~0,04 $ per ora di audio. Sui 45 podcast seguiti, negli ultimi 30 g
 ## Setup da zero
 
 1. **Google Cloud** (progetto "Podcast Digest"): Gmail API abilitata, app OAuth "In production", client Desktop; refresh token ottenuto con lo scope `https://www.googleapis.com/auth/gmail.send` (vedi cronologia git per la procedura dettagliata).
-2. **Groq**: chiave da console.groq.com → API Keys.
+2. **Groq**: chiave da console.groq.com → API Keys, da inserire come variabile d'ambiente `GROQ_API_KEY` nell'ambiente cloud della routine (non in `config.json`).
 3. **Ambiente cloud della routine con accesso di rete completo**: i file audio sono ospitati su decine di domini diversi (megaphone, spreaker, cloudfront, redirect di tracking come podtrac...), quindi un allowlist di domini non è praticabile. Senza accesso completo i download falliscono.
 4. **Routine** (`RemoteTrigger`/skill `schedule`): cron `0 5 * * *` (6:00 ora solare) / `0 4 * * *` (6:00 ora legale), `sources` → questo repo, `allowed_tools: ["Bash", "Write", "Read"]`, prompt = `ROUTINE_PROMPT.md`.
 
 ## Manutenzione
 
 - **Cambio ora legale/solare:** il cron è in UTC. Ora solare (da fine ottobre): `0 5 * * *`. Ora legale (da fine marzo): `0 4 * * *`. Va aggiornato a mano.
-- **Scadenza chiave Groq:** aggiorna `groq_api_key` e `groq_key_expires`.
+- **Scadenza chiave Groq:** aggiorna `GROQ_API_KEY` nell'ambiente della routine e `groq_key_expires` in `config.json`. Se la chiave è revocata, l'email lo segnala in cima.
 - **Un feed smette di funzionare:** compare in "Podcast non controllati oggi" nell'email; cerca il nuovo `feedUrl` come sopra.
 
 ## Sicurezza e credenziali
 
 `config.json` contiene credenziali reali ed è **committato di proposito**: è l'unico modo per la routine cloud di leggerle, dato che ogni run parte da un checkout fresco. Accettabile solo perché il repo è **privato**, a **uso personale** e non collegato ad ambienti aziendali. GitHub può bloccare i push che contengono segreti riconosciuti (push protection): va autorizzato esplicitamente.
+
+Eccezione: **la chiave Groq non va mai nel repo.** La prima chiave, committata il 13/10/2026, è stata segnalata come esposta (GitHub secret scanning, GitGuardian) e dal 17/10/2026 risultava revocata (`401 Invalid API Key`), quindi niente trascrizioni. Ora il codice legge `GROQ_API_KEY` dalle variabili d'ambiente (con `groq_api_key` in `config.json` solo come ripiego per test locali, da non committare).
 
 ## Storia
 
