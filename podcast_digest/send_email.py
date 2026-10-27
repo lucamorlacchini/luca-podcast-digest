@@ -1,9 +1,11 @@
 import base64
 import sys
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import requests
 
+from podcast_digest.email_html import to_html
 from podcast_digest.main import load_json as load_config
 from podcast_digest.google_auth import refresh_access_token
 
@@ -11,7 +13,10 @@ GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
 
 
 def send_email(access_token: str, to_address: str, from_address: str, subject: str, body_text: str) -> None:
-    message = MIMEText(body_text, "plain", "utf-8")
+    # HTML so the text reflows to the phone width; plain text stays as the fallback part.
+    message = MIMEMultipart("alternative")
+    message.attach(MIMEText(body_text, "plain", "utf-8"))
+    message.attach(MIMEText(to_html(body_text), "html", "utf-8"))
     message["To"] = to_address
     message["From"] = from_address
     message["Subject"] = subject

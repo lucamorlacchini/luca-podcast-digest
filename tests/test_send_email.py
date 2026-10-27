@@ -29,7 +29,11 @@ def test_send_email_posts_correct_gmail_payload():
     assert parsed["Subject"] == "Test Subject"
     assert parsed["To"] == "luca@alesea.com"
     assert parsed["From"] == "luca.morlacchini@gmail.com"
-    assert parsed.get_payload(decode=True).decode("utf-8") == "Ciao mondo"
+    plain, rich = parsed.get_payload()
+    assert plain.get_content_type() == "text/plain"
+    assert plain.get_payload(decode=True).decode("utf-8") == "Ciao mondo"
+    assert rich.get_content_type() == "text/html"
+    assert "Ciao mondo" in rich.get_payload(decode=True).decode("utf-8")
 
 
 def test_send_email_raises_on_http_error():
