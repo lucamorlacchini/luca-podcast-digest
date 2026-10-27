@@ -12,10 +12,12 @@ Altrimenti scrivi in `email_body.txt` un'email in italiano così strutturata:
 3. Se "feed_errors" non è vuota: una riga "Podcast non controllati oggi: " seguita dai nomi.
 4. Gli episodi raggruppati per "podcast". Per ogni episodio: il titolo, un riassunto e il link "Ascolta su Spotify: <spotify_url>".
 
+Scrivi ogni paragrafo e ogni punto elenco su una sola riga, senza andare a capo a metà frase: l'email viene impaginata in automatico.
+
 Per scrivere ogni riassunto leggi per intero il file indicato in "content_file" di quell'episodio.
 - Se content_source è "transcript": riassunto in italiano del contenuto reale dell'episodio (anche se l'episodio è in inglese), così strutturato:
-  - un paragrafo di 3-4 frasi che dice di cosa parla l'episodio, chi parla (conduttori, ospiti) e la tesi o il messaggio principale;
-  - poi i punti chiave come elenco puntato (righe che iniziano con "- "): da 3 punti per gli episodi brevi (sotto le ~2.500 parole, indicate in "content_words") fino a 6-8 per quelli lunghi. Ogni punto è una frase concreta: fatti, numeri, nomi, argomentazioni, esempi e opinioni degli ospiti, con chi sostiene cosa quando conta. Evita frasi generiche come "si parla di economia".
+  - un paragrafo di 5-6 frasi che dice di cosa parla l'episodio, chi parla (conduttori, ospiti), il contesto e la tesi o il messaggio principale;
+  - poi i punti chiave come elenco puntato (righe che iniziano con "- "), in base a "content_words": 4-5 punti sotto le ~2.500 parole, 7-9 punti fino a ~8.000 parole, 10-12 punti oltre. Ogni punto è di 1-2 frasi concrete: fatti, numeri, nomi, argomentazioni, esempi e opinioni degli ospiti, con chi sostiene cosa quando conta. Evita frasi generiche come "si parla di economia".
   - Nelle rassegne stampa e nei notiziari (più notizie diverse nello stesso episodio) fai un punto per ogni notizia.
   - Ignora pubblicità e sponsor letti dentro l'episodio. Riporta solo ciò che è detto nella trascrizione, senza aggiungere conoscenze esterne.
 - Se content_source è "description_fallback": riassunto di 2-3 frasi dalle note dell'episodio, seguito da "(dalle note dell'episodio, non dalla trascrizione: <fallback_reason>)".
